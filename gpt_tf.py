@@ -1,4 +1,5 @@
 import tensorflow as tf
+import argparse
 
 from picoGPT.utils import load_encoder_hparams_and_params
 
@@ -76,6 +77,10 @@ class TransformerDecoderBlock(tf.keras.Model):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--prompt", required=True, help="Input text")
+    args = parser.parse_args()
+
     B, T, D = 4, 8, 64
     n_heads = 12
     block = TransformerDecoderBlock(
@@ -89,3 +94,7 @@ if __name__ == "__main__":
     encoder, hparams, params = load_encoder_hparams_and_params(model_size, models_dir)
     print("hparams:", hparams)
     print("params:", params.keys())
+
+    print("prompt:", args.prompt)
+    input_ids = encoder.encode(args.prompt)
+    print("input_ids:", input_ids)
