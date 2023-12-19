@@ -1,5 +1,7 @@
 import tensorflow as tf
 
+from picoGPT.utils import load_encoder_hparams_and_params
+
 
 class MaskedMultiSelfAttention(tf.keras.layers.Layer):
     def __init__(self, h_dim, max_T, n_heads, drop_p):
@@ -81,3 +83,9 @@ if __name__ == "__main__":
     )
     block.build(input_shape=(B, T, n_heads * D))
     block.summary()
+
+    model_size = "124M"
+    models_dir = "models"
+    encoder, hparams, params = load_encoder_hparams_and_params(model_size, models_dir)
+    print("hparams:", hparams)
+    print("params:", params.keys())
