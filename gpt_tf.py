@@ -94,7 +94,7 @@ if __name__ == "__main__":
     input_ids = encoder.encode(args.prompt)
     print("input_ids:", input_ids)
 
-    B, T, D = 1, args.n_tokens_to_generate, hparams["n_embd"]
+    B, T, D = 1, hparams["n_ctx"], hparams["n_embd"]
     n_heads = hparams["n_head"]
     block = TransformerDecoderBlock(h_dim=D, max_T=T, n_heads=n_heads, drop_p=0.1)
     block.build(input_shape=(B, T, D))
