@@ -79,15 +79,10 @@ class TransformerDecoderBlock(tf.keras.Model):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--prompt", required=True, help="Input text")
-    args = parser.parse_args()
-
-    B, T, D = 4, 8, 64
-    n_heads = 12
-    block = TransformerDecoderBlock(
-        h_dim=n_heads * D, max_T=T, n_heads=n_heads, drop_p=0.1
+    parser.add_argument(
+        "--n_tokens_to_generate", default=40, help="number of tokens to generate"
     )
-    block.build(input_shape=(B, T, n_heads * D))
-    block.summary()
+    args = parser.parse_args()
 
     model_size = "124M"
     models_dir = "models"
@@ -98,3 +93,9 @@ if __name__ == "__main__":
     print("prompt:", args.prompt)
     input_ids = encoder.encode(args.prompt)
     print("input_ids:", input_ids)
+
+    B, T, D = 1, args.n_tokens_to_generate, hparams["n_embd"]
+    n_heads = hparams["n_head"]
+    block = TransformerDecoderBlock(h_dim=D, max_T=T, n_heads=n_heads, drop_p=0.1)
+    block.build(input_shape=(B, T, D))
+    block.summary()
