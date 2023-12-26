@@ -9,9 +9,7 @@ class MaskedMultiSelfAttention(tf.keras.layers.Layer):
         super(MaskedMultiSelfAttention, self).__init__()
         self.n_heads = n_heads
 
-        self.q_net = tf.keras.layers.Dense(h_dim)
-        self.k_net = tf.keras.layers.Dense(h_dim)
-        self.v_net = tf.keras.layers.Dense(h_dim)
+        self.c_attn = tf.keras.layers.Dense(3 * h_dim)
 
         self.proj_net = tf.keras.layers.Dense(h_dim)
 
@@ -29,9 +27,11 @@ class MaskedMultiSelfAttention(tf.keras.layers.Layer):
         B, T, C = x.shape
         N, D = self.n_heads, C // self.n_heads
 
-        q = tf.reshape(self.q_net(x), (B, T, N, D))
-        k = tf.reshape(self.k_net(x), (B, T, N, D))
-        v = tf.reshape(self.v_net(x), (B, T, N, D))
+        qkv = self.c_attn(x)
+        q, k, v = tf.split(qkv, 3, axis=-1)
+        q = tf.reshape(q, (B, T, N, D))
+        k = tf.reshape(k, (B, T, N, D))
+        v = tf.reshape(v, (B, T, N, D))
 
         q = tf.transpose(q, perm=[0, 2, 1, 3])
         k = tf.transpose(k, perm=[0, 2, 1, 3])
