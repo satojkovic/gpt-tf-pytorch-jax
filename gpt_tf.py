@@ -89,6 +89,11 @@ if __name__ == "__main__":
     encoder, hparams, params = load_encoder_hparams_and_params(model_size, models_dir)
     print("hparams:", hparams)
     print("params:", params.keys())
+    print("params[blocks]:", params["blocks"][0].keys())
+    print("params[blocks][attn]:", params["blocks"][0]["attn"].keys())
+    print("params[blocks][ln_1]:", params["blocks"][0]["ln_1"].keys())
+    print("params[blocks][ln_2]:", params["blocks"][0]["ln_2"].keys())
+    print("params[blocks][mlp]:", params["blocks"][0]["mlp"].keys())
 
     print("prompt:", args.prompt)
     input_ids = encoder.encode(args.prompt)
