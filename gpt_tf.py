@@ -11,7 +11,7 @@ class MaskedMultiSelfAttention(tf.keras.layers.Layer):
 
         self.c_attn = tf.keras.layers.Dense(3 * h_dim)
 
-        self.proj_net = tf.keras.layers.Dense(h_dim)
+        self.c_proj = tf.keras.layers.Dense(h_dim)
 
         self.attn_drop = tf.keras.layers.Dropout(drop_p)
         self.proj_drop = tf.keras.layers.Dropout(drop_p)
@@ -49,7 +49,7 @@ class MaskedMultiSelfAttention(tf.keras.layers.Layer):
         attention = tf.transpose(attention, perm=[0, 2, 1, 3])
         attention = tf.reshape(attention, (B, T, C))
 
-        out = self.proj_net(self.proj_drop(attention))
+        out = self.c_proj(self.proj_drop(attention))
         return out
 
 
