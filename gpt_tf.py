@@ -76,6 +76,88 @@ class TransformerDecoderBlock(tf.keras.Model):
         return x
 
 
+class GPT2(tf.keras.Model):
+    def __init__(self, params, hparams, max_T=1024, drop_p=0.1):
+        super(GPT2, self).__init__()
+        self.params = params
+        self.hparams = hparams
+        self.drop_p = drop_p
+        # Input embeddings
+        self.wte = tf.convert_to_tensor(self.params["wte"])
+        self.wpe = tf.convert_to_tensor(self.params["wpe"])
+        # Decoder blocks
+        self.blocks = []
+        for i in range(self.hparams["n_head"]):
+            block = TransformerDecoderBlock(
+                h_dim=self.hparams["n_embd"],
+                max_T=max_T,
+                n_heads=self.hparams["n_head"],
+                drop_p=self.drop_p,
+            )
+            self.blocks.append(block)
+        # LayerNorm
+        self.layer_norm = tf.keras.layers.LayerNormalization()
+
+    def set_pretrained_weights(self):
+        for i, block in enumerate(self.blocks):
+            self._set_block_weights(i, block)
+        self._set_layernorm_weights()
+
+    def _set_block_weights(self, layer_idx, block):
+        # MaskedMultiSelfAttention.c_attn, c_proj
+        block.layers[0].c_attn.set_weights(
+            [
+                self.params["blocks"][layer_idx]["attn"]["c_attn"]["w"],
+                self.params["blocks"][layer_idx]["attn"]["c_attn"]["b"],
+            ]
+        )
+        block.layers[0].c_proj.set_weights(
+            [
+                self.params["blocks"][layer_idx]["attn"]["c_proj"]["w"],
+                self.params["blocks"][layer_idx]["attn"]["c_proj"]["b"],
+            ]
+        )
+        # MLP
+        block.layers[1].layers[0].set_weights(
+            [
+                self.params["blocks"][layer_idx]["mlp"]["c_fc"]["w"],
+                self.params["blocks"][layer_idx]["mlp"]["c_fc"]["b"],
+            ]
+        )
+        block.layers[1].layers[1].set_weights(
+            [
+                self.params["blocks"][layer_idx]["mlp"]["c_proj"]["w"],
+                self.params["blocks"][layer_idx]["mlp"]["c_proj"]["b"],
+            ]
+        )
+        # Layernorm(ln1, ln2)
+        block.layers[2].set_weights(
+            [
+                self.params["blocks"][layer_idx]["ln_1"]["g"],
+                self.params["blocks"][layer_idx]["ln_1"]["b"],
+            ]
+        )
+        block.layers[3].set_weights(
+            [
+                self.params["blocks"][layer_idx]["ln_2"]["g"],
+                self.params["blocks"][layer_idx]["ln_2"]["b"],
+            ]
+        )
+
+    def _set_layernorm_weights(self):
+        self.layer_norm.set_weights(
+            [self.params["ln_f"]["g"], self.params["ln_f"]["b"]]
+        )
+
+    def call(self, input_ids):
+        input_ids = tf.cast(input_ids, tf.int32)
+        x = tf.gather(self.wte, input_ids) + tf.gather(self.wpe, input_ids)
+        for block in self.blocks:
+            x = block(x)
+        x = self.layer_norm(x)
+        return tf.matmul(x, self.params["wte"].T)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--prompt", required=True, help="Input text")
@@ -99,8 +181,7 @@ if __name__ == "__main__":
     input_ids = encoder.encode(args.prompt)
     print("input_ids:", input_ids)
 
-    B, T, D = 1, hparams["n_ctx"], hparams["n_embd"]
-    n_heads = hparams["n_head"]
-    block = TransformerDecoderBlock(h_dim=D, max_T=T, n_heads=n_heads, drop_p=0.1)
-    block.build(input_shape=(B, T, D))
-    block.summary()
+    model = GPT2(params, hparams, max_T=len(input_ids))
+    model.build(input_shape=(1, len(input_ids)))
+    model.set_pretrained_weights()
+    model.summary()
