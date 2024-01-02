@@ -1,5 +1,6 @@
 import tensorflow as tf
 import argparse
+import numpy as np
 
 from picoGPT.utils import load_encoder_hparams_and_params
 
@@ -151,7 +152,9 @@ class GPT2(tf.keras.Model):
 
     def call(self, input_ids):
         input_ids = tf.cast(input_ids, tf.int32)
-        x = tf.gather(self.wte, input_ids) + tf.gather(self.wpe, input_ids)
+        x = tf.gather(self.wte, input_ids) + tf.gather(
+            self.wpe, range(input_ids.shape[1])
+        )
         for block in self.blocks:
             x = block(x)
         x = self.layer_norm(x)
@@ -185,3 +188,9 @@ if __name__ == "__main__":
     model.build(input_shape=(1, len(input_ids)))
     model.set_pretrained_weights()
     model.summary()
+
+    # Predict next words
+    logits = model(tf.expand_dims(input_ids, axis=0))
+    next_id = tf.argmax(tf.squeeze(logits, axis=0)[-1], axis=-1)
+    output_text = encoder.decode(input_ids + [next_id.numpy().item()])
+    print(output_text)
