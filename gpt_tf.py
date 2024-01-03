@@ -1,6 +1,7 @@
 import tensorflow as tf
 import argparse
 import numpy as np
+from tqdm import tqdm
 
 from picoGPT.utils import load_encoder_hparams_and_params
 
@@ -159,7 +160,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--prompt", required=True, help="Input text")
     parser.add_argument(
-        "--n_tokens_to_generate", default=40, help="number of tokens to generate"
+        "--n_tokens_to_generate",
+        default=40,
+        type=int,
+        help="number of tokens to generate",
     )
     args = parser.parse_args()
 
@@ -176,6 +180,7 @@ if __name__ == "__main__":
 
     print("prompt:", args.prompt)
     input_ids = encoder.encode(args.prompt)
+    input_text = encoder.decode(input_ids)
     print("input_ids:", input_ids)
 
     model = GPT2(params, hparams, drop_p=0.1)
@@ -183,8 +188,13 @@ if __name__ == "__main__":
     model.set_pretrained_weights()
     model.summary()
 
-    # Predict next words
-    logits = model(tf.expand_dims(input_ids, axis=0))
-    next_id = tf.argmax(tf.squeeze(logits, axis=0)[-1], axis=-1)
-    output_text = encoder.decode(input_ids + [next_id.numpy().item()])
-    print(output_text)
+    # Generate next words
+    for _ in tqdm(range(args.n_tokens_to_generate), "generating"):
+        logits = model(tf.expand_dims(input_ids, axis=0))
+        next_id = tf.argmax(tf.squeeze(logits, axis=0)[-1], axis=-1)
+        input_ids.append(next_id.numpy().item())
+    print("Input text:\n", input_text)
+    print(
+        "Generated:\n",
+        encoder.decode(input_ids[len(input_ids) - args.n_tokens_to_generate :]),
+    )
