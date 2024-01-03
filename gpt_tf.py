@@ -6,7 +6,7 @@ from picoGPT.utils import load_encoder_hparams_and_params
 
 
 class MaskedMultiSelfAttention(tf.keras.layers.Layer):
-    def __init__(self, h_dim, max_T, n_heads, drop_p):
+    def __init__(self, h_dim, n_heads, drop_p):
         super(MaskedMultiSelfAttention, self).__init__()
         self.n_heads = n_heads
 
@@ -17,16 +17,13 @@ class MaskedMultiSelfAttention(tf.keras.layers.Layer):
         self.attn_drop = tf.keras.layers.Dropout(drop_p)
         self.proj_drop = tf.keras.layers.Dropout(drop_p)
 
-        # Create lower triangle mask
-        mask = tf.linalg.band_part(tf.ones((max_T, max_T)), -1, 0)
-        mask = tf.reshape(mask, (1, 1, max_T, max_T))
-
-        # Set mask as non-trainable variable
-        self.mask = tf.Variable(mask, trainable=False)
-
     def call(self, x):
         B, T, C = x.shape
         N, D = self.n_heads, C // self.n_heads
+
+        # Create lower triangle mask
+        mask = tf.linalg.band_part(tf.ones((T, T)), -1, 0)
+        mask = tf.reshape(mask, (1, 1, T, T))
 
         qkv = self.c_attn(x)
         q, k, v = tf.split(qkv, 3, axis=-1)
@@ -43,7 +40,7 @@ class MaskedMultiSelfAttention(tf.keras.layers.Layer):
         )
 
         # Apply mask
-        weights += (1 - self.mask) * -1e9
+        weights += (1 - mask) * -1e9
 
         normalized_weights = tf.nn.softmax(weights, axis=-1)
         attention = tf.matmul(self.attn_drop(normalized_weights), v)
@@ -55,10 +52,10 @@ class MaskedMultiSelfAttention(tf.keras.layers.Layer):
 
 
 class TransformerDecoderBlock(tf.keras.Model):
-    def __init__(self, h_dim, max_T, n_heads, drop_p):
+    def __init__(self, h_dim, n_heads, drop_p):
         super().__init__()
 
-        self.attn = MaskedMultiSelfAttention(h_dim, max_T, n_heads, drop_p)
+        self.attn = MaskedMultiSelfAttention(h_dim, n_heads, drop_p)
         self.mlp = tf.keras.Sequential(
             [
                 tf.keras.layers.Dense(units=4 * h_dim, activation="gelu"),
@@ -76,7 +73,7 @@ class TransformerDecoderBlock(tf.keras.Model):
 
 
 class GPT2(tf.keras.Model):
-    def __init__(self, params, hparams, max_T=1024, drop_p=0.1):
+    def __init__(self, params, hparams, drop_p=0.1):
         super(GPT2, self).__init__()
         self.params = params
         self.hparams = hparams
@@ -89,7 +86,6 @@ class GPT2(tf.keras.Model):
         for i in range(self.hparams["n_head"]):
             block = TransformerDecoderBlock(
                 h_dim=self.hparams["n_embd"],
-                max_T=max_T,
                 n_heads=self.hparams["n_head"],
                 drop_p=self.drop_p,
             )
@@ -182,7 +178,7 @@ if __name__ == "__main__":
     input_ids = encoder.encode(args.prompt)
     print("input_ids:", input_ids)
 
-    model = GPT2(params, hparams, max_T=len(input_ids))
+    model = GPT2(params, hparams, drop_p=0.1)
     model.build(input_shape=(1, len(input_ids)))
     model.set_pretrained_weights()
     model.summary()
