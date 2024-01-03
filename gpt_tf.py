@@ -70,10 +70,8 @@ class TransformerDecoderBlock(tf.keras.Model):
         self.ln2 = tf.keras.layers.LayerNormalization()
 
     def call(self, x):
-        x = self.attn(x) + x
-        x = self.ln1(x)
-        x = self.mlp(x) + x
-        x = self.ln2(x)
+        x = self.attn(self.ln1(x)) + x
+        x = self.mlp(self.ln2(x)) + x
         return x
 
 
