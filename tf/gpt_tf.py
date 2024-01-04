@@ -3,6 +3,12 @@ import argparse
 import numpy as np
 from tqdm import tqdm
 
+import sys
+import os
+
+# import picoGPT
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.append(os.path.join(os.path.dirname(__file__), "../picoGPT"))
 from picoGPT.utils import load_encoder_hparams_and_params
 
 
