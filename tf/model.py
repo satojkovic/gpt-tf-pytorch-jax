@@ -141,11 +141,15 @@ class GPT2(tf.keras.Model):
         )
 
     def call(self, input_ids):
+        # Text and Position Embedding
         input_ids = tf.cast(input_ids, tf.int32)
         x = tf.gather(self.wte, input_ids) + tf.gather(
             self.wpe, range(input_ids.shape[1])
         )
+        # Transformer Block (Decoder only)
         for block in self.blocks:
             x = block(x)
+        # Additional LayerNorm
         x = self.layer_norm(x)
+        # Linear
         return tf.matmul(x, self.params["wte"].T)
