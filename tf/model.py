@@ -43,7 +43,7 @@ class MaskedMultiSelfAttention(tf.keras.layers.Layer):
         attention = tf.transpose(attention, perm=[0, 2, 1, 3])
         attention = tf.reshape(attention, (B, T, C))
 
-        out = self.c_proj(self.proj_drop(attention))
+        out = self.proj_drop(self.c_proj(attention))
         return out
 
 
