@@ -39,7 +39,7 @@ class MaskedMultiSelfAttention(tf.keras.layers.Layer):
         weights += (1 - mask) * -1e9
 
         normalized_weights = tf.nn.softmax(weights, axis=-1)
-        attention = tf.matmul(self.attn_drop(normalized_weights), v)
+        attention = self.attn_drop(tf.matmul(normalized_weights, v))
         attention = tf.transpose(attention, perm=[0, 2, 1, 3])
         attention = tf.reshape(attention, (B, T, C))
 
