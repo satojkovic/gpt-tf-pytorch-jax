@@ -59,6 +59,14 @@ class TransformerDecoderBlock(nn.Module):
         return x
 
 
+class GPT2(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, x):
+        pass
+
+
 if __name__ == "__main__":
     import torchsummary
 
