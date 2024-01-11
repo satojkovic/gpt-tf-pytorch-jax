@@ -60,11 +60,32 @@ class TransformerDecoderBlock(nn.Module):
 
 
 class GPT2(nn.Module):
-    def __init__(self):
+    def __init__(self, params, hparams, drop_p=0.1):
         super().__init__()
+        self.params = params
+        self.hparams = hparams
+        self.drop_p = drop_p
+        self.h_dim = hparams["n_embd"]
+        self.n_heads = hparams["n_head"]
 
-    def forward(self, x):
-        pass
+        self.wte = self.params["wte.weight"]
+        self.wpe = self.params["wpe.weight"]
+
+        self.blocks = []
+        for _ in range(self.hparams["n_layer"]):
+            block = TransformerDecoderBlock(
+                h_dim=self.h_dim, n_heads=self.n_heads, drop_p=self.drop_p
+            )
+            self.blocks.append(block)
+        self.layer_norm = nn.LayerNorm(self.h_dim)
+
+    def forward(self, input_ids):
+        x = self.wte[input_ids] + self.wpe[list(range(input_ids.shape[1]))]
+        for block in self.blocks:
+            x = block(x)
+        x = self.layer_norm(x)
+        out = x @ self.wte.T
+        return out
 
 
 if __name__ == "__main__":

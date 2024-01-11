@@ -8,7 +8,7 @@ import torch
 # import picoGPT
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.append(os.path.join(os.path.dirname(__file__), "../picoGPT"))
-from encoder import get_encoder
+from picoGPT.encoder import get_encoder
 
 
 def save_file(file_path, req):

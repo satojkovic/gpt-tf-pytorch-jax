@@ -3,6 +3,8 @@ import argparse
 import sys
 import os
 from utils import load_encoder_hparams_and_params
+from model import GPT2
+import torchsummaryX
 
 
 if __name__ == "__main__":
@@ -26,3 +28,6 @@ if __name__ == "__main__":
     input_ids = encoder.encode(args.prompt)
     input_text = encoder.decode(input_ids)
     print("input_ids:", input_ids)
+
+    model = GPT2(params, hparams, drop_p=0.1)
+    torchsummaryX.summary(model, torch.ones(1, len(input_ids), dtype=torch.long))
