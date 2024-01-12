@@ -67,17 +67,40 @@ class GPT2(nn.Module):
         self.drop_p = drop_p
         self.h_dim = hparams["n_embd"]
         self.n_heads = hparams["n_head"]
+        self.n_layer = hparams["n_layer"]
 
         self.wte = self.params["wte.weight"]
         self.wpe = self.params["wpe.weight"]
 
         self.blocks = []
-        for _ in range(self.hparams["n_layer"]):
+        for _ in range(self.n_layer):
             block = TransformerDecoderBlock(
                 h_dim=self.h_dim, n_heads=self.n_heads, drop_p=self.drop_p
             )
             self.blocks.append(block)
         self.layer_norm = nn.LayerNorm(self.h_dim)
+
+        self._set_block_weights()
+        self._set_layernorm_weights()
+
+    def _set_block_weights(self):
+        def get_param(layer_idx, param_string):
+            return {
+                "weight": self.params[f"h.{layer_idx}.{param_string}.weight"].T,
+                "bias": self.params[f"h.{layer_idx}.{param_string}.bias"],
+            }
+
+        for i, block in enumerate(self.blocks):
+            block.attn.c_attn.load_state_dict(get_param(i, "attn.c_attn"))
+            block.attn.c_proj.load_state_dict(get_param(i, "attn.c_proj"))
+            block.ln1.load_state_dict(get_param(i, "ln_1"))
+            block.ln2.load_state_dict(get_param(i, "ln_2"))
+            block.mlp[0].load_state_dict(get_param(i, "mlp.c_fc"))
+            block.mlp[2].load_state_dict(get_param(i, "mlp.c_proj"))
+
+    def _set_layernorm_weights(self):
+        d = {"weight": self.params["ln_f.weight"], "bias": self.params["ln_f.bias"]}
+        self.layer_norm.load_state_dict(d)
 
     def forward(self, input_ids):
         x = self.wte[input_ids] + self.wpe[list(range(input_ids.shape[1]))]
