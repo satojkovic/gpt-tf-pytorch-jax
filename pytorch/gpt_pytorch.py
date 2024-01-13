@@ -9,6 +9,8 @@ from torchinfo import summary
 
 
 if __name__ == "__main__":
+    torch.manual_seed(0)
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--prompt", required=True, help="Input text")
     parser.add_argument(
