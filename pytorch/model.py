@@ -72,12 +72,14 @@ class GPT2(nn.Module):
         self.wte = self.params["wte.weight"]
         self.wpe = self.params["wpe.weight"]
 
-        self.blocks = []
-        for _ in range(self.n_layer):
-            block = TransformerDecoderBlock(
-                h_dim=self.h_dim, n_heads=self.n_heads, drop_p=self.drop_p
-            )
-            self.blocks.append(block)
+        self.blocks = nn.ModuleList(
+            [
+                TransformerDecoderBlock(
+                    h_dim=self.h_dim, n_heads=self.n_heads, drop_p=self.drop_p
+                )
+                for _ in range(self.n_layer)
+            ]
+        )
         self.layer_norm = nn.LayerNorm(self.h_dim)
 
         self._set_block_weights()
