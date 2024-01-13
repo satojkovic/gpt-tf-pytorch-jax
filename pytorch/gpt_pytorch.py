@@ -4,8 +4,8 @@ import sys
 import os
 from utils import load_encoder_hparams_and_params
 from model import GPT2
-import torchsummaryX
 from tqdm import tqdm
+from torchinfo import summary
 
 
 if __name__ == "__main__":
@@ -31,7 +31,7 @@ if __name__ == "__main__":
     print("input_ids:", input_ids)
 
     model = GPT2(params, hparams, drop_p=0.1)
-    torchsummaryX.summary(model, torch.ones(1, len(input_ids), dtype=torch.long))
+    summary(model, input_size=(1, len(input_ids)), dtypes=[torch.long])
 
     for _ in tqdm(range(args.n_tokens_to_generate), "generating"):
         logits = model(torch.tensor(input_ids).unsqueeze(0))
