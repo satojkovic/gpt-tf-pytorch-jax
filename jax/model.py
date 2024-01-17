@@ -18,11 +18,13 @@ class MLP(nn.Module):
     h_dim: int
     drop_p: float
 
-    def setup(self):
-        pass
-
+    @nn.compact
     def __call__(self, x, deterministic=None):
-        pass
+        x = nn.Dense(4 * self.h_dim)(x)
+        x = nn.gelu(x)
+        x = nn.Dense(self.h_dim)(x)
+        x = nn.Dropout(rate=self.drop_p, deterministic=deterministic)(x)
+        return x
 
 
 class TransformerDecoderBlock(nn.Module):
