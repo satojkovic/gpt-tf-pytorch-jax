@@ -1,5 +1,6 @@
 import jax.numpy as jnp
 from flax import linen as nn
+import math
 
 
 class MaskedMultiSelfAttention(nn.Module):
@@ -8,10 +9,39 @@ class MaskedMultiSelfAttention(nn.Module):
     drop_p: float
 
     def setup(self):
-        pass
+        self.c_attn = nn.Dense(self.h_dim * 3)
+        self.c_proj = nn.Dense(self.h_dim)
+
+        self.attn_drop = nn.Dropout(self.drop_p)
+        self.proj_drop = nn.Dropout(self.drop_p)
 
     def __call__(self, x, deterministic=None):
-        pass
+        B, T, C = x.shape
+        N, D = self.n_heads, C // self.n_heads
+
+        qkv = self.c_attn(x)
+        q, k, v = jnp.array_split(qkv, 3, axis=-1)
+        q = q.reshape(B, T, N, D).transpose(0, 2, 1, 3)
+        k = k.reshape(B, T, N, D).transpose(0, 2, 1, 3)
+        v = v.reshape(B, T, N, D).transpose(0, 2, 1, 3)
+
+        # Returns: [B, 1, T, T] shaped causal mask
+        mask = nn.make_causal_mask(jnp.ones((B, T)), dtype=jnp.int32)
+
+        # calc attention weights (B, N, T, T)
+        weights = jnp.matmul(q, jnp.swapaxes(k, -2, -1)) / math.sqrt(D)
+        weights += (1 - mask) * 1e-9
+        normalized_weights = nn.softmax(weights, axis=-1)
+
+        # calc attention (B, N, T, D)
+        attn = jnp.matmul(normalized_weights, v)
+        attn = self.attn_drop(attn, deterministic=deterministic)
+
+        # gather heads (B, T, N, D) -> (B, T, N*D)
+        attn = attn.transpose(0, 2, 1, 3).reshape(B, T, N * D)
+
+        out = self.proj_drop(self.c_proj(attn), deterministic=deterministic)
+        return out
 
 
 class MLP(nn.Module):
