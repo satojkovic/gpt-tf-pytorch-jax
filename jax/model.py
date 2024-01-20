@@ -1,6 +1,7 @@
 import jax.numpy as jnp
 from flax import linen as nn
 import math
+import jax
 
 
 class MaskedMultiSelfAttention(nn.Module):
@@ -81,7 +82,24 @@ class GPT2(nn.Module):
     drop_p: float
 
     def setup(self):
-        pass
+        self.wpe = self.params["wpe"]
+        self.wte = self.params["wte"]
+        self.n_layer = self.hparams["n_layer"]
+        self.h_dim = self.hparams["n_embd"]
+        self.n_heads = self.hparams["n_head"]
 
-    def __call__(self, input_ids):
-        pass
+        self.blocks = [
+            TransformerDecoderBlock(
+                h_dim=self.h_dim, n_heads=self.n_heads, drop_p=self.drop_p
+            )
+            for _ in range(self.n_layer)
+        ]
+        self.layer_norm = nn.LayerNorm(epsilon=1e-5)
+
+    def __call__(self, input_ids, deterministic=None):
+        x = self.wte[input_ids] + self.wpe[list(range(input_ids.shape[1]))]
+        for block in self.blocks:
+            x = block(x, deterministic=deterministic)
+        x = self.layer_norm(x)
+        out = jnp.matmul(x, self.wte.transpose(1, 0))
+        return out
