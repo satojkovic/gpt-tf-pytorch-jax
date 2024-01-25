@@ -74,6 +74,7 @@ class TransformerDecoderBlock(nn.Module):
     def __call__(self, x, deterministic=None):
         x = self.attn(self.ln1(x), deterministic=deterministic) + x
         x = self.mlp(self.ln2(x), deterministic=deterministic) + x
+        return x
 
 
 class GPT2(nn.Module):
