@@ -38,5 +38,7 @@ if __name__ == "__main__":
 
     # Inspect model structure
     key = jax.random.PRNGKey(0)
-    params = GPT2(params, hparams, drop_p=0.1).init(key, input_ids, deterministic=True)
-    print(jax.tree_map(lambda x: x.shape, params))
+    gpt2_params = GPT2(params, hparams, drop_p=0.1).init(
+        key, input_ids, deterministic=True
+    )
+    print(jax.tree_map(lambda x: x.shape, gpt2_params))
