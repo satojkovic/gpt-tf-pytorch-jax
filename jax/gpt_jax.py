@@ -40,5 +40,5 @@ if __name__ == "__main__":
     key = jax.random.PRNGKey(0)
     gpt2_params = GPT2(params, hparams, drop_p=0.1).init(
         key, input_ids, deterministic=True
-    )
+    )["params"]
     print(jax.tree_map(lambda x: x.shape, gpt2_params))
