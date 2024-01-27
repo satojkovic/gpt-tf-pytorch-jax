@@ -41,3 +41,6 @@ if __name__ == "__main__":
     model = GPT2(params, hparams, drop_p=0.1)
     gpt2_params = model.init(key, input_ids, deterministic=True)["params"]
     print(jax.tree_map(lambda x: x.shape, gpt2_params))
+
+    # Assign pre-trained weights
+    model.assign_weights(gpt2_params)

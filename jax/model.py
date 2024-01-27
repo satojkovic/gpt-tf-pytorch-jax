@@ -85,17 +85,54 @@ class GPT2(nn.Module):
     def setup(self):
         self.wpe = self.params["wpe"]
         self.wte = self.params["wte"]
-        self.n_layer = self.hparams["n_layer"]
-        self.h_dim = self.hparams["n_embd"]
-        self.n_heads = self.hparams["n_head"]
 
         self.blocks = [
             TransformerDecoderBlock(
-                h_dim=self.h_dim, n_heads=self.n_heads, drop_p=self.drop_p
+                h_dim=self.hparams["n_embd"],
+                n_heads=self.hparams["n_head"],
+                drop_p=self.drop_p,
             )
-            for _ in range(self.n_layer)
+            for _ in range(self.hparams["n_layer"])
         ]
         self.layer_norm = nn.LayerNorm(epsilon=1e-5)
+
+    def assign_weights(self, model_params):
+        def get_param(layer_idx, module, dense):
+            return {
+                "kernel": self.params["blocks"][layer_idx][module][dense]["w"],
+                "bias": self.params["blocks"][layer_idx][module][dense]["b"],
+            }
+
+        def assign_decoder_block_weights(layer_idx, block):
+            # attn module
+            block_attn = block["attn"]
+            block_attn["c_attn"] = get_param(layer_idx, module="attn", dense="c_attn")
+            block_attn["c_proj"] = get_param(layer_idx, module="attn", dense="c_proj")
+            # mlp module
+            block_mlp = block["mlp"]
+            block_mlp["Dense_0"] = get_param(layer_idx, module="mlp", dense="c_fc")
+            block_mlp["Dense_1"] = get_param(layer_idx, module="mlp", dense="c_proj")
+            # layer norm
+            block["ln1"]["scale"], block["ln1"]["bias"] = (
+                self.params["blocks"][layer_idx]["ln_1"]["g"],
+                self.params["blocks"][layer_idx]["ln_1"]["b"],
+            )
+            block["ln2"]["scale"], block["ln2"]["bias"] = (
+                self.params["blocks"][layer_idx]["ln_2"]["g"],
+                self.params["blocks"][layer_idx]["ln_2"]["b"],
+            )
+
+        # DecoderBlock
+        for i in range(self.hparams["n_layer"]):
+            assign_decoder_block_weights(i, model_params[f"blocks_{i}"])
+
+        # layer_norm
+        model_params["layer_norm"]["scale"], model_params["layer_norm"]["bias"] = (
+            self.params["ln_f"]["g"],
+            self.params["ln_f"]["b"],
+        )
+
+        return model_params
 
     def __call__(self, input_ids, deterministic=None):
         x = self.wte[input_ids] + self.wpe[list(range(input_ids.shape[1]))]
