@@ -32,14 +32,15 @@ if __name__ == "__main__":
 
     print("prompt:", args.prompt)
     input_ids = encoder.encode(args.prompt)
-    input_ids = jnp.expand_dims(jnp.asarray(input_ids), axis=0)
     input_text = encoder.decode(input_ids)
     print("input_ids:", input_ids)
 
     # Inspect model structure
     key = jax.random.PRNGKey(0)
     model = GPT2(params, hparams, drop_p=0.1)
-    gpt2_params = model.init(key, input_ids, deterministic=True)["params"]
+    gpt2_params = model.init(
+        key, jnp.expand_dims(jnp.asarray(input_ids), axis=0), deterministic=True
+    )["params"]
     print(jax.tree_map(lambda x: x.shape, gpt2_params))
 
     # Assign pre-trained weights
