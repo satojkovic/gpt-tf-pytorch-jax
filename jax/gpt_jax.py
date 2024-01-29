@@ -4,6 +4,8 @@ import os
 import jax
 from clu import parameter_overview
 import jax.numpy as jnp
+import numpy as np
+from tqdm import tqdm
 
 from model import GPT2
 
@@ -45,3 +47,18 @@ if __name__ == "__main__":
 
     # Assign pre-trained weights
     model.assign_weights(gpt2_params)
+
+    # Auto regressive
+    for _ in tqdm(range(args.n_tokens_to_generate), "generating"):
+        logits = model.apply(
+            {"params": gpt2_params},
+            jnp.expand_dims(jnp.asarray(input_ids), axis=0),
+            deterministic=True,
+        )
+        next_id = jnp.argmax(jnp.squeeze(logits, axis=0)[-1], axis=-1)
+        input_ids.append(int(next_id))
+    print("Input text:\n", input_text)
+    print(
+        "Generated:\n",
+        encoder.decode(input_ids[len(input_ids) - args.n_tokens_to_generate :]),
+    )
